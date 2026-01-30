@@ -75,6 +75,17 @@
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --bg-0: #09090b;
+  --bg-100: #18181b;
+  --bg-200: #27272a;
+  --bg-300: #3f3f46;
+  --text-100: #fafafa;
+  --text-200: #e4e4e7;
+  --text-300: #a1a1aa;
+  --text-400: #71717a;
+}
+#root {
+  width: 100%;
 }
 
 a {
@@ -95,10 +106,6 @@ body {
   min-height: 100vh;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
 
 button {
   border-radius: var(--radius-md);
@@ -118,7 +125,6 @@ button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
-
 
 @theme inline {
   /* Radius */
@@ -181,6 +187,28 @@ button:focus-visible {
   --duration-fast: var(--duration-fast);
   --duration-normal: var(--duration-normal);
   --duration-slow: var(--duration-slow);
+  --font-serif: "Instrument Serif", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Outfit", system-ui, sans-serif;
+  --radius: var(----radius);
+  --color-text-400: var(----text-400);
+  --color-text-300: var(----text-300);
+  --color-text-200: var(----text-200);
+  --color-text-100: var(----text-100);
+  --color-bg-300: var(----bg-300);
+  --color-bg-200: var(----bg-200);
+  --color-bg-100: var(----bg-100);
+  --color-bg-0: var(----bg-0);
+  @keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+    }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    }
+  }
 }
 
 .dark {

@@ -1,0 +1,19 @@
+.scrambled-text-block {
+  /* No font styling - inherit from parent */
+  display: inline;
+}
+
+.scrambled-text-block p {
+  margin: 0;
+  display: inline;
+}
+
+.scramble-char {
+  display: inline-block;
+  transition: color 0.1s ease;
+  white-space: pre;
+}
+
+.scramble-char.scrambling {
+  /* color removed per request */
+}
