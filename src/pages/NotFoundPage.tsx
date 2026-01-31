@@ -1,49 +1,36 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Home, ArrowLeft } from "lucide-react";
+import FuzzyText from "@/components/ui/FuzzyText";
 
 export function NotFoundPage() {
+  const navigate = useNavigate();
+
   return (
-    <div className="container mx-auto p-4 sm:p-6 flex items-center justify-center min-h-[calc(100vh-4rem)]">
-      <Card className="max-w-md w-full">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-20 h-20 flex items-center justify-center rounded-full bg-muted mb-4">
-            <span className="text-4xl font-bold text-muted-foreground">404</span>
-          </div>
-          <CardTitle className="text-xl sm:text-2xl">
-            페이지를 찾을 수 없습니다
-          </CardTitle>
-          <CardDescription>
-            요청하신 페이지가 존재하지 않거나 이동되었습니다.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <Button asChild variant="default" className="w-full">
-            <Link to="/chat">
-              <Home className="mr-2 h-4 w-4" />
-              홈으로 돌아가기
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            className="w-full"
-            onClick={() => window.history.back()}
-          >
-            <button>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              이전 페이지
-            </button>
-          </Button>
-        </CardContent>
-      </Card>
+    <div className="flex h-screen w-full flex-col items-center justify-center bg-black gap-8">
+      <div className="flex flex-col items-center justify-center">
+        <FuzzyText 
+          baseIntensity={0.15} 
+          hoverIntensity={0.5} 
+          enableHover={true}
+          fontSize="clamp(8rem, 20vw, 20rem)"
+          fontWeight={900}
+          color="#ffffff"
+        >
+          404
+        </FuzzyText>
+        <p className="text-muted-foreground mt-4 text-xl">
+          Page not found
+        </p>
+      </div>
+
+      <Button 
+        onClick={() => navigate("/")}
+        variant="outline"
+        size="lg"
+        className="rounded-full px-8 py-6 text-lg hover:bg-white/10 transition-all duration-300"
+      >
+        Go Home
+      </Button>
     </div>
   );
 }

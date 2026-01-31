@@ -130,6 +130,10 @@ export function useChat() {
     setState(prev => ({ ...prev, error: null }));
   }, []);
 
+  const setError = useCallback((error: string) => {
+    setState(prev => ({ ...prev, error }));
+  }, []);
+
   return {
     // State
     status: state.status,
@@ -143,5 +147,6 @@ export function useChat() {
     sendMessage,
     clearMessages,
     clearError,
+    setError, // Exposed for external use/testing
   };
 }

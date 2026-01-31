@@ -28,6 +28,7 @@ import {
   ReasoningTrigger,
 } from "@/components/ai-elements/reasoning";
 import { Loader } from "@/components/ai-elements/loader";
+import { ErrorModal } from "@/components/features/ErrorModal";
 import { useChat } from "@/hooks/useChat";
 import type { ChatMetadata } from "@/features/chat/types";
 
@@ -93,6 +94,9 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
     currentMetadata,
     sendMessage,
     clearMessages,
+    error,
+    clearError,
+    setError,
   } = useChat();
 
   // Notify parent when metadata changes
@@ -226,6 +230,25 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
                 Gemini 2.5 Flash-Lite
               </span>
             </PromptInputTools>
+            
+            {/* DEV: Error Simulation Buttons (Restore for testing) */}
+            <div className="flex gap-2 mr-4 opacity-80 hover:opacity-100 transition-opacity">
+               <button 
+                 onClick={() => setError("429 RESOURCE_EXHAUSTED: Quota exceeded test")}
+                 className="text-[10px] bg-red-500/30 text-red-400 border border-red-500/50 px-2 py-1 rounded hover:bg-red-500/50 transition-colors"
+                 title="Simulate 429 Error"
+               >
+                 Err 429
+               </button>
+               <button 
+                 onClick={() => setError("500 INTERNAL_SERVER_ERROR test")}
+                 className="text-[10px] bg-orange-500/30 text-orange-400 border border-orange-500/50 px-2 py-1 rounded hover:bg-orange-500/50 transition-colors"
+                 title="Simulate 500 Error"
+               >
+                 Err 500
+               </button>
+            </div>
+
             <PromptInputSubmit 
               disabled={!input.trim() && status === 'idle'} 
               status={getSubmitStatus()} 
@@ -233,6 +256,16 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
           </PromptInputFooter>
         </PromptInput>
       </div>
+
+      <ErrorModal 
+        error={error} 
+        onClose={clearError}
+        onRetry={() => {
+          clearError();
+          // Optional: Implement retry logic here if needed, 
+          // but for now just clearing the error allows user to try again manually
+        }}
+      />
     </div>
   );
 };
