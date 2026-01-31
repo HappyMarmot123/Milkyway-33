@@ -134,6 +134,48 @@ export function useChat() {
     setState(prev => ({ ...prev, error }));
   }, []);
 
+  const regenerateLastResponse = useCallback(() => {
+    if (state.status !== 'idle' || state.messages.length === 0) return;
+
+    // Find the last user message manually
+    let lastUserMessageIndex = -1;
+    for (let i = state.messages.length - 1; i >= 0; i--) {
+      if (state.messages[i].role === 'user') {
+        lastUserMessageIndex = i;
+        break;
+      }
+    }
+    if (lastUserMessageIndex === -1) return;
+
+    const lastUserMessage = state.messages[lastUserMessageIndex];
+    if (!lastUserMessage) return;
+
+    // Reset messages to up to the last user message
+    // NOTICE: We remove the last user message too, because sendMessage will add it back!
+    // NO wait, sendMessage adds a NEW message. 
+    // We should probably keep the user message and just call the internal streaming logic?
+    // OR: Just deleting everything after the *previous* user message and re-sending is easier.
+    
+    // Let's optimize: We want to keep the conversation history EXCEPT the last exchange.
+    const messagesToKeep = state.messages.slice(0, lastUserMessageIndex);
+
+    setState(prev => ({
+      ...prev,
+      messages: messagesToKeep,
+      currentResponse: '',
+      currentMetadata: null,
+      error: null,
+    }));
+
+    // Trigger sending the message again
+    // We use setTimeout to allow state to settle, though not strictly necessary with the way sendMessage works
+    // But since sendMessage checks for 'idle', and we just set state, we need to be careful.
+    // Actually, calling sendMessage immediately should work because it reads state from closure/ref or we can just bypass the check.
+    // However, sendMessage adds the user message again. So we cleared it above.
+    sendMessage(lastUserMessage.content);
+
+  }, [state.messages, state.status, sendMessage]);
+
   return {
     // State
     status: state.status,
@@ -145,8 +187,9 @@ export function useChat() {
     
     // Actions
     sendMessage,
+    regenerateLastResponse, // Exposed for external use
     clearMessages,
     clearError,
-    setError, // Exposed for external use/testing
+    setError,
   };
-}
+};

@@ -64,7 +64,7 @@ export class ErrorBoundary extends React.Component {
               )}
 
               <div className="flex gap-3">
-                <Button onClick={this.handleReset} className="flex-1">
+                <Button onClick={this.handleReset} variant="outline" className="flex-1">
                   <RefreshCcw className="mr-2 h-4 w-4" />
                   다시 시도
                 </Button>

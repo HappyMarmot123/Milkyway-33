@@ -29,6 +29,7 @@ import {
 } from "@/components/ai-elements/reasoning";
 import { Loader } from "@/components/ai-elements/loader";
 import { ErrorModal } from "@/components/features/ErrorModal";
+import { ResponseActionContainer } from "@/components/features/ResponseActionContainer";
 import { useChat } from "@/hooks/useChat";
 import type { ChatMetadata } from "@/features/chat/types";
 
@@ -93,6 +94,7 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
     currentResponse, 
     currentMetadata,
     sendMessage,
+    regenerateLastResponse,
     clearMessages,
     error,
     clearError,
@@ -134,7 +136,7 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
 
       <Conversation className="flex-1 min-h-0 overflow-hidden">
         <ConversationContent>
-          {messages.map((message) => (
+          {messages.map((message, index) => (
             <div key={message.id}>
               {/* Show reasoning/thought if available */}
               {message.role === "assistant" && message.metadata?.thought && (
@@ -149,27 +151,14 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
                   <MessageResponse>{message.content}</MessageResponse>
                 </MessageContent>
                 {message.role === "assistant" && (
-                  <MessageActions className="">
-                    <MessageAction
-                      onClick={() => navigator.clipboard.writeText(message.content)}
-                      label="Copy"
-                      tooltip="Copy message"
-                    >
-                      <CopyIcon className="size-3" />
-                    </MessageAction>
-                    {message.metadata?.usage_metadata && (
-                      <MessageAction
-                        onClick={() => {
-                          const usage = message.metadata?.usage_metadata;
-                          alert(`Tokens Used:\n- Prompt: ${usage?.prompt_token_count}\n- Response: ${usage?.candidates_token_count}\n- Total: ${usage?.total_token_count}`);
-                        }}
-                        label="Info"
-                        tooltip="Show token usage"
-                      >
-                        <InfoIcon className="size-3" />
-                      </MessageAction>
-                    )}
-                  </MessageActions>
+                  <ResponseActionContainer 
+                    content={message.content}
+                    onRegenerate={() => {
+                      if (index === messages.length - 1) {
+                         regenerateLastResponse();
+                      }
+                    }}
+                  />
                 )}
               </Message>
             </div>
