@@ -1,10 +1,12 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { LandingPage } from "@/pages/LandingPage";
-import { ChatPage } from "@/pages/ChatPage";
-import { SettingsPage } from "@/pages/SettingsPage";
-import { HistoryPage } from "@/pages/HistoryPage";
-import { NotFoundPage } from "@/pages/NotFoundPage";
+import { 
+  LandingPage, 
+  ChatPage, 
+  SettingsPage, 
+  HistoryPage, 
+  NotFoundPage 
+} from "@/pages";
 import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 

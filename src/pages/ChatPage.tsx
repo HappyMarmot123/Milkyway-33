@@ -1,56 +1,34 @@
 import { useState } from "react";
-import { useChat } from "@ai-sdk/react";
 import ChatBot from "@/components/ChatBot";
 import { TokenUsage } from "@/components/features/TokenUsage";
-import { ConversationExport } from "@/components/features/ConversationExport";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import type { ChatMetadata } from "@/features/chat/types";
 
 export function ChatPage() {
-  const [model, setModel] = useState("openai/gpt-4o");
-  const { messages, status } = useChat();
   const [isInfoExpanded, setIsInfoExpanded] = useState(false);
+  const [lastMetadata, setLastMetadata] = useState<ChatMetadata | null>(null);
 
-  // 토큰 사용량 계산 (메시지 텍스트 길이 기반 추정)
-  const calculateTokens = (text) => {
-    // 대략적인 추정: 1 토큰 ≈ 4자 (한글/영문 혼합)
-    return Math.ceil(text.length / 4);
-  };
+  // Convert our metadata format to TokenUsage format
+  const tokenUsage = lastMetadata?.usage_metadata ? {
+    inputTokens: lastMetadata.usage_metadata.prompt_token_count || 0,
+    outputTokens: lastMetadata.usage_metadata.candidates_token_count || 0,
+  } : null;
 
-  const totalUsage = messages.reduce(
-    (acc, msg) => {
-      const text = msg.parts?.find((p) => p.type === "text")?.text || "";
-      const tokens = calculateTokens(text);
-
-      if (msg.role === "user") {
-        return { ...acc, inputTokens: acc.inputTokens + tokens };
-      } else {
-        return { ...acc, outputTokens: acc.outputTokens + tokens };
-      }
-    },
-    { inputTokens: 0, outputTokens: 0 }
-  );
-
-  const currentConversation = {
-    id: "current",
-    title: "현재 대화",
-    createdAt: new Date().toISOString(),
-    messages: messages.map((msg) => ({
-      role: msg.role,
-      content: msg.parts?.find((p) => p.type === "text")?.text || "",
-    })),
+  const handleMetadataUpdate = (metadata: ChatMetadata) => {
+    setLastMetadata(metadata);
   };
 
   return (
     <main aria-label="chat-page" className="flex flex-col h-full">
       <section aria-label="chat-interface" className="flex-1 overflow-hidden">
-        <ChatBot />
+        <ChatBot onMetadataUpdate={handleMetadataUpdate} />
       </section>
 
       <Separator />
@@ -73,21 +51,45 @@ export function ChatPage() {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <ConversationExport conversation={currentConversation} />
-              </div>
-              <TokenUsage
-                usage={totalUsage}
-                maxTokens={100000}
-                modelId={model}
-              />
+              {lastMetadata && (
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>Model: {lastMetadata.model_used}</p>
+                  {lastMetadata.finish_reason && (
+                    <p>Finish: {lastMetadata.finish_reason}</p>
+                  )}
+                </div>
+              )}
+              {tokenUsage && (
+                <TokenUsage
+                  usage={tokenUsage}
+                  maxTokens={1000000}
+                  modelId="gemini-2.5-flash-lite"
+                />
+              )}
             </div>
           </CollapsibleContent>
         </Collapsible>
       </aside>
 
-
+      {/* 데스크톱: 항상 표시 */}
+      <aside 
+        aria-label="chat-info-desktop" 
+        className="hidden lg:block p-4 bg-muted/30"
+      >
+        <div className="flex items-center gap-4">
+          {lastMetadata && (
+            <div className="text-xs text-muted-foreground flex gap-4">
+              <span>Model: {lastMetadata.model_used}</span>
+              {lastMetadata.usage_metadata?.total_token_count && (
+                <span>Tokens: {lastMetadata.usage_metadata.total_token_count.toLocaleString()}</span>
+              )}
+              {lastMetadata.finish_reason && (
+                <span>Status: {lastMetadata.finish_reason}</span>
+              )}
+            </div>
+          )}
+        </div>
+      </aside>
     </main>
   );
 }
-
