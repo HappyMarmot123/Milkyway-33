@@ -30,10 +30,7 @@ export function Hero() {
       />
       
       {/* Logo Loop at the bottom */}
-      <div className="pt-[5rem] pr-[10rem]">
-        <p className="text-center text-sm text-white/50 mb-6">
-          Powered by the world's leading AI providers
-        </p>
+      <div className="relative z-20 pt-[5rem] pr-[10rem]">
         <LogoLoop speed={40} direction="left" pauseOnHover>
           {partnerLogos.map((logo) => (
             <LogoLoopItem key={logo.name}>
