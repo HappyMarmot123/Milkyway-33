@@ -7,6 +7,16 @@ export interface ChatMessage {
   metadata?: ChatMetadata;
 }
 
+export interface ChatMessageExample {
+  input: string;
+  output: string;
+}
+
+export interface ChatPromptConfig {
+  systemInstruction?: string;
+  examples?: ChatMessageExample[];
+}
+
 export interface ChatMetadata {
   model_used?: string;
   thought?: string | null;
@@ -55,4 +65,5 @@ export interface ChatState {
   currentResponse: string;
   currentMetadata: ChatMetadata | null;
   error: string | null;
+  promptConfig: ChatPromptConfig;
 }

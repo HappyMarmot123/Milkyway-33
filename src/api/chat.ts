@@ -1,4 +1,4 @@
-import type { ChatEvent } from '@/features/chat/types';
+import type { ChatEvent, ChatPromptConfig } from '@/features/chat/types';
 
 const API_BASE_URL = 'http://localhost:8888/api/v1';
 
@@ -6,13 +6,27 @@ const API_BASE_URL = 'http://localhost:8888/api/v1';
  * Streaming chat API client
  * Yields ChatEvent objects as they arrive from the server
  */
-export async function* streamChat(message: string): AsyncGenerator<ChatEvent> {
+export async function* streamChat(message: string, config?: ChatPromptConfig): AsyncGenerator<ChatEvent> {
+  const body: any = { message };
+  
+  if (config) {
+    if (config.systemInstruction) {
+      body.system_instruction = config.systemInstruction;
+    }
+    if (config.examples && config.examples.length > 0) {
+      body.few_shot_examples = config.examples.map(ex => ({
+        input: ex.input,
+        output: ex.output
+      }));
+    }
+  }
+
   const response = await fetch(`${API_BASE_URL}/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {

@@ -1,6 +1,5 @@
-"use client";
 import { useState, useEffect } from "react";
-import { CopyIcon, RefreshCcwIcon, InfoIcon } from "lucide-react";
+import { CopyIcon, RefreshCcwIcon, InfoIcon, Settings2 } from "lucide-react";
 import {
   Conversation,
   ConversationContent,
@@ -30,6 +29,7 @@ import {
 import { Loader } from "@/components/ai-elements/loader";
 import { ErrorModal } from "@/components/features/ErrorModal";
 import { ResponseActionContainer } from "@/components/features/ResponseActionContainer";
+import { PromptConfigModal } from "@/components/features/PromptConfigModal";
 import { useChat } from "@/hooks/useChat";
 import type { ChatMetadata } from "@/features/chat/types";
 
@@ -88,6 +88,7 @@ const MetadataDisplay = ({ metadata }: { metadata: ChatMetadata | null }) => {
 
 const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
   const [input, setInput] = useState("");
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
   const { 
     messages, 
     status, 
@@ -99,6 +100,8 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
     error,
     clearError,
     setError,
+    promptConfig,
+    setPromptConfig,
   } = useChat();
 
   // Notify parent when metadata changes
@@ -146,7 +149,7 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
                 </Reasoning>
               )}
               
-              <Message from={message.role}>
+              <Message from={message.role} className="">
                 <MessageContent>
                   <MessageResponse>{message.content}</MessageResponse>
                 </MessageContent>
@@ -174,7 +177,7 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
           )}
           
           {status === 'streaming' && currentResponse && (
-            <Message from="assistant">
+            <Message from="assistant" className="">
               <MessageContent>
                 <MessageResponse>{currentResponse}</MessageResponse>
               </MessageContent>
@@ -215,6 +218,21 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
                 <RefreshCcwIcon size={16} />
                 <span>Clear</span>
               </PromptInputButton>
+
+              <div className="w-px h-4 bg-border mx-1" />
+
+              <PromptInputButton
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsConfigOpen(true)}
+                label="Prompt Settings"
+                tooltip="Configure System Instruction & Few-shot"
+                className={promptConfig.systemInstruction || (promptConfig.examples?.length || 0) > 0 ? "text-primary/80" : ""}
+              >
+                <Settings2 size={16} />
+                <span>Settings</span>
+              </PromptInputButton>
+
               <span className="text-xs text-muted-foreground ml-2">
                 Gemini 2.5 Flash-Lite
               </span>
@@ -254,6 +272,13 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
           // Optional: Implement retry logic here if needed, 
           // but for now just clearing the error allows user to try again manually
         }}
+      />
+
+      <PromptConfigModal 
+        isOpen={isConfigOpen}
+        onClose={() => setIsConfigOpen(false)}
+        config={promptConfig}
+        onSave={(newConfig) => setPromptConfig(newConfig)}
       />
     </div>
   );

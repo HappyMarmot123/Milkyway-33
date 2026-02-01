@@ -4,6 +4,8 @@ from pydantic import BaseModel
 
 class ChatRequest(BaseModel):
     message: str
+    system_instruction: Optional[str] = None
+    few_shot_examples: Optional[List[dict[str, str]]] = None
 
 class UsageMetadata(BaseModel):
     prompt_token_count: Optional[int] = None

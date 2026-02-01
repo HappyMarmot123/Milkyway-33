@@ -10,7 +10,12 @@ class GeminiService:
         self.client = genai.Client(api_key=settings.GOOGLE_API_KEY)
         self.model_name = settings.GEMINI_MODEL_NAME
 
-    async def generate_response_stream(self, message: str) -> AsyncIterator[str]:
+    async def generate_response_stream(
+        self, 
+        message: str, 
+        system_instruction: str = None,
+        few_shot_examples: list[dict] = None
+    ) -> AsyncIterator[str]:
         """
         Streaming response using latest google-genai (v1) SDK.
         Extracts all possible metadata including Thinking, Safety, and Usage.
@@ -18,10 +23,45 @@ class GeminiService:
         try:
             yield json.dumps({"status": "thinking", "model": self.model_name}) + "\n"
             
+            # Construct configuration
+            config_params = {}
+            if system_instruction:
+                config_params['system_instruction'] = system_instruction
+                
+            # Construct content with few-shot examples if present
+            request_contents = []
+            
+            if few_shot_examples:
+                for example in few_shot_examples:
+                    # Creating a turn for each example
+                    if 'input' in example:
+                        request_contents.append(
+                            genai.types.Content(
+                                role="user",
+                                parts=[genai.types.Part.from_text(text=example['input'])]
+                            )
+                        )
+                    if 'output' in example:
+                        request_contents.append(
+                            genai.types.Content(
+                                role="model",
+                                parts=[genai.types.Part.from_text(text=example['output'])]
+                            )
+                        )
+            
+            # Add the actual user message
+            request_contents.append(
+                genai.types.Content(
+                    role="user",
+                    parts=[genai.types.Part.from_text(text=message)]
+                )
+            )
+
             # Non-blocking async streaming
             response_iterator = await self.client.aio.models.generate_content_stream(
                 model=self.model_name,
-                contents=message
+                contents=request_contents,
+                config=genai.types.GenerateContentConfig(**config_params) if config_params else None
             )
             
             yield json.dumps({"status": "generating"}) + "\n"

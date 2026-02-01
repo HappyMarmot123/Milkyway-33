@@ -9,7 +9,11 @@ router = APIRouter()
 @router.post("/chat") # Server-Sent Events (SSE)
 async def chat_stream(request: ChatRequest):
     return StreamingResponse(
-        gemini_service.generate_response_stream(request.message),
+        gemini_service.generate_response_stream(
+            message=request.message,
+            system_instruction=request.system_instruction,
+            few_shot_examples=request.few_shot_examples
+        ),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

@@ -3,7 +3,8 @@ import { streamChat } from '@/api/chat';
 import type { 
   ChatMessage, 
   ChatMetadata, 
-  ChatState
+  ChatState,
+  ChatPromptConfig
 } from '@/features/chat/types';
 
 function generateId(): string {
@@ -17,10 +18,21 @@ export function useChat() {
     currentResponse: '',
     currentMetadata: null,
     error: null,
+    promptConfig: {
+      systemInstruction: '',
+      examples: []
+    }
   });
 
   const setStatus = useCallback((status: ChatState['status']) => {
     setState(prev => ({ ...prev, status }));
+  }, []);
+
+  const setPromptConfig = useCallback((config: Partial<ChatPromptConfig>) => {
+    setState(prev => ({
+      ...prev,
+      promptConfig: { ...prev.promptConfig, ...config }
+    }));
   }, []);
 
   const sendMessage = useCallback(async (content: string) => {
@@ -46,7 +58,7 @@ export function useChat() {
       let fullResponse = '';
       let metadata: ChatMetadata = {};
 
-      for await (const event of streamChat(content)) {
+      for await (const event of streamChat(content, state.promptConfig)) {
         switch (event.status) {
           case 'thinking':
             setStatus('thinking');
@@ -114,16 +126,17 @@ export function useChat() {
         error: error instanceof Error ? error.message : 'An error occurred',
       }));
     }
-  }, [state.status, setStatus]);
+  }, [state.status, state.promptConfig, setStatus]);
 
   const clearMessages = useCallback(() => {
-    setState({
+    setState(prev => ({
+      ...prev,
       status: 'idle',
       messages: [],
       currentResponse: '',
       currentMetadata: null,
       error: null,
-    });
+    }));
   }, []);
 
   const clearError = useCallback(() => {
@@ -150,12 +163,6 @@ export function useChat() {
     const lastUserMessage = state.messages[lastUserMessageIndex];
     if (!lastUserMessage) return;
 
-    // Reset messages to up to the last user message
-    // NOTICE: We remove the last user message too, because sendMessage will add it back!
-    // NO wait, sendMessage adds a NEW message. 
-    // We should probably keep the user message and just call the internal streaming logic?
-    // OR: Just deleting everything after the *previous* user message and re-sending is easier.
-    
     // Let's optimize: We want to keep the conversation history EXCEPT the last exchange.
     const messagesToKeep = state.messages.slice(0, lastUserMessageIndex);
 
@@ -168,10 +175,6 @@ export function useChat() {
     }));
 
     // Trigger sending the message again
-    // We use setTimeout to allow state to settle, though not strictly necessary with the way sendMessage works
-    // But since sendMessage checks for 'idle', and we just set state, we need to be careful.
-    // Actually, calling sendMessage immediately should work because it reads state from closure/ref or we can just bypass the check.
-    // However, sendMessage adds the user message again. So we cleared it above.
     sendMessage(lastUserMessage.content);
 
   }, [state.messages, state.status, sendMessage]);
@@ -184,6 +187,7 @@ export function useChat() {
     currentMetadata: state.currentMetadata,
     error: state.error,
     isLoading: state.status !== 'idle',
+    promptConfig: state.promptConfig,
     
     // Actions
     sendMessage,
@@ -191,5 +195,6 @@ export function useChat() {
     clearMessages,
     clearError,
     setError,
+    setPromptConfig,
   };
 };
