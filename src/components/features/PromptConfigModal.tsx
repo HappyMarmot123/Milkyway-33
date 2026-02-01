@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Trash2, Save } from "lucide-react";
+import { X, Save } from "lucide-react";
 import { ChatPromptConfig, ChatMessageExample } from "@/features/chat/types";
 
 interface PromptConfigModalProps {
@@ -16,40 +16,105 @@ export const PromptConfigModal = ({
   onSave,
 }: PromptConfigModalProps) => {
   const [systemInstruction, setSystemInstruction] = useState("");
-  const [examples, setExamples] = useState<ChatMessageExample[]>([]);
+  // Always maintain at least one example structure for the UI
+  const [example, setExample] = useState<ChatMessageExample>({ input: "", output: "" });
+  const [errors, setErrors] = useState<{ system?: string; example?: { input?: string; output?: string } }>({});
 
   useEffect(() => {
     if (isOpen) {
       setSystemInstruction(config.systemInstruction || "");
-      setExamples(config.examples || []);
+      // If valid examples exist, use the first one, otherwise default empty
+      if (config.examples && config.examples.length > 0) {
+        setExample(config.examples[0]);
+      } else {
+        setExample({ input: "", output: "" });
+      }
+      setErrors({});
     }
   }, [isOpen, config]);
 
+  const DENY_PATTERNS = [
+    /ignore previous instructions/i,
+    /system prompt/i,
+    /ignore the above/i,
+    /DAN mode/i,
+    /jailbreak/i,
+    /never refuse/i,
+    /do not apologize/i,
+    /do not say no/i,
+    /developer mode/i,
+    /unrestricted/i,
+    /god mode/i,
+    /sudo/i,
+    /decode/i,
+    /base64/i,
+    /hex string/i,
+    /\|\|/,
+    /&&/,
+    /\$\(/,
+  ];
+
+  const checkInjection = (text: string): string | null => {
+    if (text.length > 300) return "Message exceeds 300 characters.";
+    for (const pattern of DENY_PATTERNS) {
+      if (pattern.test(text)) {
+        return "Potential prompt injection detected (forbidden keyword or pattern).";
+      }
+    }
+    return null;
+  };
+
+  const validate = (sys: string, ex: ChatMessageExample) => {
+    const newErrors: typeof errors = {};
+    let hasError = false;
+
+    const sysError = checkInjection(sys);
+    if (sysError) {
+      newErrors.system = sysError;
+      hasError = true;
+    }
+
+    const inputError = checkInjection(ex.input);
+    const outputError = checkInjection(ex.output);
+
+    if (inputError || outputError) {
+      newErrors.example = {};
+      if (inputError) newErrors.example.input = inputError;
+      if (outputError) newErrors.example.output = outputError;
+      hasError = true;
+    }
+
+    setErrors(newErrors);
+    return !hasError;
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      validate(systemInstruction, example);
+    }
+  }, [systemInstruction, example, isOpen]);
+
   const handleSave = () => {
-    onSave({
-      systemInstruction,
-      examples: examples.filter((ex) => ex.input.trim() || ex.output.trim()),
-    });
-    onClose();
+    if (validate(systemInstruction, example)) {
+      const examples = [];
+      // Only save if meaningful content exists
+      if (example.input.trim() || example.output.trim()) {
+        examples.push(example);
+      }
+      
+      onSave({
+        systemInstruction,
+        examples,
+      });
+      onClose();
+    }
   };
 
-  const addExample = () => {
-    setExamples([...examples, { input: "", output: "" }]);
+  const updateExample = (field: keyof ChatMessageExample, value: string) => {
+    setExample(prev => ({ ...prev, [field]: value }));
   };
 
-  const removeExample = (index: number) => {
-    setExamples(examples.filter((_, i) => i !== index));
-  };
-
-  const updateExample = (
-    index: number,
-    field: keyof ChatMessageExample,
-    value: string
-  ) => {
-    const newExamples = [...examples];
-    newExamples[index] = { ...newExamples[index], [field]: value };
-    setExamples(newExamples);
-  };
+  const hasErrors = Object.keys(errors).length > 0;
 
   if (!isOpen) return null;
 
@@ -74,86 +139,103 @@ export const PromptConfigModal = ({
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* System Instruction */}
           <div className="space-y-2">
-            <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              System Instruction
-            </label>
+            <div className="flex justify-between">
+              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                System Instruction
+              </label>
+              {errors.system ? (
+                 <span className="text-xs text-red-500 font-medium animate-pulse">
+                   {errors.system}
+                 </span>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  {systemInstruction.length}/300
+                </span>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
               Define the persona, role, or specific rules the model should follow.
             </p>
-            <textarea
-              value={systemInstruction}
-              onChange={(e) => setSystemInstruction(e.target.value)}
-              placeholder="e.g. You are a helpful coding assistant. You should answer in Korean."
-              className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-            />
+            <div className="relative">
+              <textarea
+                value={systemInstruction}
+                onChange={(e) => setSystemInstruction(e.target.value)}
+                maxLength={300}
+                placeholder="e.g. You are a helpful coding assistant."
+                className={`flex min-h-[80px] w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y ${
+                  errors.system ? "border-red-500 focus-visible:ring-red-500" : "border-input"
+                }`}
+              />
+            </div>
           </div>
 
           <div className="border-t" />
 
-          {/* Few-shot Examples */}
+          {/* Few-shot Example (Single) */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <label className="text-sm font-medium leading-none">
-                  Few-shot Examples
+                  Few-shot Example
                 </label>
                 <p className="text-xs text-muted-foreground">
-                  Provide examples to guide the model's behavior and output format.
+                  Provide an example to guide the model's behavior.
                 </p>
               </div>
-              <button
-                onClick={addExample}
-                className="inline-flex items-center justify-center gap-1.5 rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3"
-              >
-                <Plus size={14} />
-                Add Example
-              </button>
             </div>
 
-            <div className="space-y-4">
-              {examples.map((example, index) => (
-                <div
-                  key={index}
-                  className="group relative grid gap-4 p-4 border rounded-md bg-muted/20 hover:bg-muted/30 transition-colors"
-                >
-                  <button
-                    onClick={() => removeExample(index)}
-                    className="absolute top-2 right-2 p-1.5 text-muted-foreground hover:text-red-500 rounded-md hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                  
-                  <div className="grid gap-2">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      User Input
-                    </label>
-                    <textarea
-                      value={example.input}
-                      onChange={(e) => updateExample(index, "input", e.target.value)}
-                      placeholder="User's question or input"
-                      className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    />
-                  </div>
-                  
-                  <div className="grid gap-2">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      Model Response
-                    </label>
-                    <textarea
-                      value={example.output}
-                      onChange={(e) => updateExample(index, "output", e.target.value)}
-                      placeholder="Expected model response"
-                      className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    />
-                  </div>
+            <div className="group relative grid gap-4 p-4 border rounded-md bg-muted/20 hover:bg-muted/30 transition-colors">
+              <div className="grid gap-2">
+                 <div className="flex justify-between">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    User Input
+                  </label>
+                  {errors.example?.input ? (
+                    <span className="text-[10px] text-red-500 font-medium">
+                      {errors.example.input}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">
+                      {example.input.length}/300
+                    </span>
+                  )}
                 </div>
-              ))}
+                <textarea
+                  value={example.input}
+                  onChange={(e) => updateExample("input", e.target.value)}
+                  maxLength={300}
+                  placeholder="User's question or input"
+                  className={`flex min-h-[60px] w-full rounded-md border bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y ${
+                    errors.example?.input ? "border-red-500 focus-visible:ring-red-500" : "border-input"
+                  }`}
+                />
+              </div>
               
-              {examples.length === 0 && (
-                <div className="text-center py-8 text-sm text-muted-foreground border border-dashed rounded-md">
-                  No examples added. Click "Add Example" to start.
+              <div className="grid gap-2">
+                <div className="flex justify-between">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Model Response
+                  </label>
+                   {errors.example?.output ? (
+                    <span className="text-[10px] text-red-500 font-medium">
+                      {errors.example.output}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">
+                      {example.output.length}/300
+                    </span>
+                  )}
                 </div>
-              )}
+                <textarea
+                  value={example.output}
+                  onChange={(e) => updateExample("output", e.target.value)}
+                  maxLength={300}
+                  placeholder="Expected model response"
+                  className={`flex min-h-[60px] w-full rounded-md border bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y ${
+                     errors.example?.output ? "border-red-500 focus-visible:ring-red-500" : "border-input"
+                  }`}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -168,7 +250,8 @@ export const PromptConfigModal = ({
           </button>
           <button
             onClick={handleSave}
-            className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-4 py-2"
+            disabled={hasErrors}
+            className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary  hover:bg-primary/90 h-9 px-4 py-2"
           >
             <Save size={16} />
             Save Changes

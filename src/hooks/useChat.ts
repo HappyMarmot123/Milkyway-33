@@ -120,10 +120,22 @@ export function useChat() {
         }
       }
     } catch (error) {
+      let errorMessage = 'An error occurred';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Map common backend errors
+        if (errorMessage.includes('403')) {
+          errorMessage = '보안 정책에 의해 차단된 메시지입니다.';
+        } else if (errorMessage.includes('400')) {
+          errorMessage = '잘못된 요청입니다. 메시지 길이를 확인해주세요.';
+        }
+      }
+      
       setState(prev => ({
         ...prev,
         status: 'idle',
-        error: error instanceof Error ? error.message : 'An error occurred',
+        error: errorMessage,
       }));
     }
   }, [state.status, state.promptConfig, setStatus]);
