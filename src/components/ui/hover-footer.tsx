@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -101,14 +101,13 @@ export const TextHoverEffect = ({
         strokeWidth="0.3"
         className="fill-transparent stroke-primary font-[helvetica] text-7xl font-bold"
         initial={{ strokeDashoffset: 1000, strokeDasharray: 1000 }}
-        animate={{
+        whileInView={{
           strokeDashoffset: 0,
           strokeDasharray: 1000,
         }}
         transition={{
-          duration: 4,
+          duration: 2,
           ease: "easeInOut",
-          delay: 1
         }}
       >
         {text}
@@ -133,7 +132,7 @@ export const TextHoverEffect = ({
 export const FooterBackgroundGradient = () => {
   return (
     <div
-      className="absolute inset-0 z-0"
+      className="absolute inset-0 z-0 pointer-events-none"
       style={{
         background:
           "radial-gradient(125% 125% at 50% 10%, #0F0F1166 50%, rgba(var(--primary), 0.2) 100%)",

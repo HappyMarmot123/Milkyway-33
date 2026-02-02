@@ -84,6 +84,7 @@
   --text-200: #e4e4e7;
   --text-300: #a1a1aa;
   --text-400: #71717a;
+  --main-color: #ff6b35;
 }
 
 #root {
@@ -92,12 +93,11 @@
 
 a {
   font-weight: 500;
-  color: var(--link);
   text-decoration: inherit;
   transition: color var(--duration-fast) var(--ease-out);
 }
 a:hover {
-  color: var(--link-hover);
+  color: var(--main-color);
 }
 
 body {

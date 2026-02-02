@@ -4,7 +4,7 @@ import { AnimatedText } from "@/components/ui/animated-underline-text-one";
 
 export function AppPreview() {
   return (
-    <section className="relative overflow-hidden py-32">
+    <section className="relative">
       <div className="container mx-auto px-4 relative flex flex-col items-center">
         {/* Content */}
       <div className="relative">

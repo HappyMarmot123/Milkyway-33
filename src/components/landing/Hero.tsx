@@ -13,20 +13,11 @@ export function Hero() {
   return (
     <section className="relative w-full isolate min-h-screen overflow-hidden">
       <ResponsiveHeroBanner
-        logoUrl=""
-        navLinks={[]}
-        ctaButtonText=""
-        badgeLabel="New"
-        badgeText="Milkyway AI v2.0 is live"
         title="Intelligent"
         titleLine2="Conversations"
         description="Transform your ideas into reality with Milkyway AI. Experience the most advanced models in one beautiful interface."
         primaryButtonText="Get Started"
         primaryButtonHref="/chat"
-        secondaryButtonText="Watch Demo"
-        secondaryButtonHref="#demo"
-        partnersTitle=""
-        partners={[]}
       />
       
       {/* Logo Loop at the bottom */}

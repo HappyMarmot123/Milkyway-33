@@ -7,6 +7,7 @@ interface ListItem {
   src: string;
   alt: string;
   color: "blue" | "orange" | "purple" | "cyan";
+  href?: string;
 }
 
 interface RollingTextItemProps {
@@ -21,8 +22,21 @@ const colorClassMap: Record<ListItem["color"], string> = {
 };
 
 function RollingTextItem({ item }: RollingTextItemProps) {
+  const Wrapper = item.href ? "a" : "div";
+  const wrapperProps = item.href
+    ? {
+        href: item.href,
+        target: "_blank",
+        rel: "noopener noreferrer",
+        className: "group relative w-full cursor-pointer border-b border-white/10 overflow-hidden py-8 block",
+      }
+    : {
+        className: "group relative w-full cursor-pointer border-b border-white/10 overflow-hidden py-8",
+      };
+
   return (
-    <div className="group relative w-full cursor-pointer border-b border-white/10 overflow-hidden py-8">
+    // @ts-ignore
+    <Wrapper {...wrapperProps}>
       {/* Rolling text */}
       <div className="relative overflow-hidden h-[60px] md:h-24">
         <div className="transition-transform duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] group-hover:-translate-y-1/2">
@@ -70,7 +84,7 @@ function RollingTextItem({ item }: RollingTextItemProps) {
           <div className="absolute inset-0 bg-primary/20 mix-blend-overlay" />
         </div>
       </div>
-    </div>
+    </Wrapper>
   );
 }
 
@@ -79,40 +93,44 @@ function RollingTextList({ items }: { items?: ListItem[] }) {
     {
       id: 1,
       title: "Discover",
-      category: "Research",
-      src: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&auto=format&fit=crop&q=60",
-      alt: "Team discovering insights",
+      category: "GitHub",
+      src: "https://avatars.githubusercontent.com/u/164841087?v=4",
+      alt: "HappyMarmot123",
       color: "orange",
+      href: "https://github.com/HappyMarmot123",
     },
     {
       id: 2,
       title: "Design",
-      category: "Experience",
-      src: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=400&auto=format&fit=crop&q=60",
-      alt: "Design collaboration",
+      category: "GitHub",
+      src: "https://avatars.githubusercontent.com/u/164841087?v=4",
+      alt: "HappyMarmot123",
       color: "orange",
+      href: "https://github.com/HappyMarmot123",
     },
     {
       id: 3,
       title: "Develop",
-      category: "Engineering",
-      src: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&auto=format&fit=crop&q=60",
-      alt: "Developers coding",
+      category: "GitHub",
+      src: "https://avatars.githubusercontent.com/u/164841087?v=4",
+      alt: "HappyMarmot123",
       color: "orange",
+      href: "https://github.com/HappyMarmot123",
     },
-
   ];
 
   const displayItems = items || defaultItems;
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col items-center justify-center px-4 py-12">
-      <div className="w-full flex flex-col">
-        {displayItems.map((item) => (
-          <RollingTextItem key={item.id} item={item} />
-        ))}
+    <section className="py-24 bg-background border-t border-white/5">
+      <div className="container px-4 mx-auto">
+        <div className="w-full flex flex-col">
+          {displayItems.map((item) => (
+            <RollingTextItem key={item.id} item={item} />
+          ))}
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
