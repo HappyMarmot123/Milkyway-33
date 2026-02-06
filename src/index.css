@@ -84,7 +84,14 @@
   --text-200: #e4e4e7;
   --text-300: #a1a1aa;
   --text-400: #71717a;
+  
+  /* Main Accent Color Palette */
   --main-color: #ff6b35;
+  --main-color-light: #ff8c5a;
+  --main-color-dark: #e55a25;
+  --accent-orange: #ff6b35;
+  --accent-yellow: #ffc107;
+  --accent-coral: #ff7f50;
 }
 
 #root {

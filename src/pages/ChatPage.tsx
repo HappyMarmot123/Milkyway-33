@@ -1,9 +1,8 @@
 import { useState } from "react";
 import ChatBot from "@/components/ChatBot";
 import { TokenUsage } from "@/components/features/TokenUsage";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronUp, Sparkles, Zap, Clock } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -11,54 +10,93 @@ import {
 } from "@/components/ui/collapsible";
 import type { ChatMetadata } from "@/features/chat/types";
 
-export function ChatPage() {
-  const [isInfoExpanded, setIsInfoExpanded] = useState(false);
-  const [lastMetadata, setLastMetadata] = useState<ChatMetadata | null>(null);
+// Floating metadata panel component
+const MetadataPanel = ({ 
+  metadata, 
+  isExpanded, 
+  onToggle 
+}: { 
+  metadata: ChatMetadata | null;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) => {
+  if (!metadata) return null;
 
-  // Convert our metadata format to TokenUsage format
-  const tokenUsage = lastMetadata?.usage_metadata ? {
-    inputTokens: lastMetadata.usage_metadata.prompt_token_count || 0,
-    outputTokens: lastMetadata.usage_metadata.candidates_token_count || 0,
+  const tokenUsage = metadata.usage_metadata ? {
+    inputTokens: metadata.usage_metadata.prompt_token_count || 0,
+    outputTokens: metadata.usage_metadata.candidates_token_count || 0,
   } : null;
 
-  const handleMetadataUpdate = (metadata: ChatMetadata) => {
-    setLastMetadata(metadata);
-  };
-
   return (
-    <main aria-label="chat-page" className="flex flex-col h-full bg-lightgray">
-      <section aria-label="chat-interface" className="flex-1 overflow-hidden">
-        <ChatBot onMetadataUpdate={handleMetadataUpdate} />
-      </section>
-
-      <Separator />
-
-      {/* 모바일: 접을 수 있는 패널 */}
-      <aside aria-label="chat-info-mobile" className="lg:hidden bg-muted/50">
-        <Collapsible open={isInfoExpanded} onOpenChange={setIsInfoExpanded}>
+    <div className="absolute bottom-0 left-0 right-0 z-10">
+      <Collapsible open={isExpanded} onOpenChange={onToggle}>
+        {/* Collapsed state - minimal floating bar */}
+        <div className="bg-gradient-to-r from-bg-100/95 via-bg-100/90 to-bg-100/95 backdrop-blur-xl border-t border-orange-500/10 shadow-[0_-1px_10px_-2px_rgba(255,107,53,0.05)]">
           <CollapsibleTrigger asChild>
             <Button
               variant="ghost"
-              className="w-full justify-between px-4 py-3 h-auto"
+              className="w-full h-10 justify-center gap-3 hover:bg-white/5 transition-all duration-300 group"
             >
-              <span className="text-sm font-semibold">대화 정보</span>
-              {isInfoExpanded ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronUp className="h-4 w-4" />
-              )}
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                {/* Model badge */}
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3 text-orange-400" />
+                  <span className="font-medium">{metadata.model_used}</span>
+                </div>
+                
+                {/* Token count */}
+                {metadata.usage_metadata?.total_token_count && (
+                  <div className="flex items-center gap-1.5 text-muted-foreground/70">
+                    <Zap className="h-3 w-3 text-yellow-400/70" />
+                    <span>{metadata.usage_metadata.total_token_count.toLocaleString()} 토큰</span>
+                  </div>
+                )}
+
+                {/* Status */}
+                {metadata.finish_reason && (
+                  <div className="hidden sm:flex items-center gap-1.5 text-muted-foreground/70">
+                    <Clock className="h-3 w-3 text-green-400/70" />
+                    <span>{metadata.finish_reason}</span>
+                  </div>
+                )}
+              </div>
+              
+              <ChevronUp className={`h-4 w-4 text-muted-foreground/50 transition-transform duration-300 ${
+                isExpanded ? "rotate-180" : ""
+              }`} />
             </Button>
           </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="p-4 space-y-4">
-              {lastMetadata && (
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p>Model: {lastMetadata.model_used}</p>
-                  {lastMetadata.finish_reason && (
-                    <p>Finish: {lastMetadata.finish_reason}</p>
-                  )}
-                </div>
-              )}
+        </div>
+
+        {/* Expanded state - detailed info */}
+        <CollapsibleContent>
+          <div className="bg-gradient-to-b from-bg-100/95 to-bg-200/95 backdrop-blur-xl border-t border-white/5 p-4 sm:p-6">
+            <div className="max-w-2xl mx-auto">
+              {/* Stats grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                <StatCard 
+                  icon={<Sparkles className="h-4 w-4 text-orange-400" />}
+                  label="모델"
+                  value={metadata.model_used}
+                />
+                <StatCard 
+                  icon={<Zap className="h-4 w-4 text-amber-400" />}
+                  label="입력 토큰"
+                  value={tokenUsage?.inputTokens.toLocaleString() || "0"}
+                />
+                <StatCard 
+                  icon={<Zap className="h-4 w-4 text-orange-300" />}
+                  label="출력 토큰"
+                  value={tokenUsage?.outputTokens.toLocaleString() || "0"}
+                />
+                <StatCard 
+                  icon={<Clock className="h-4 w-4 text-green-400" />}
+                  label="상태"
+                  value={metadata.finish_reason || "완료"}
+                />
+              </div>
+
+              {/* Token usage bar */}
               {tokenUsage && (
                 <TokenUsage
                   usage={tokenUsage}
@@ -67,29 +105,61 @@ export function ChatPage() {
                 />
               )}
             </div>
-          </CollapsibleContent>
-        </Collapsible>
-      </aside>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  );
+};
 
-      {/* 데스크톱: 항상 표시 */}
-      <aside 
-        aria-label="chat-info-desktop" 
-        className="hidden lg:block p-4 bg-muted/30"
+// Stat card component for the expanded panel
+const StatCard = ({ 
+  icon, 
+  label, 
+  value 
+}: { 
+  icon: React.ReactNode; 
+  label: string; 
+  value: string 
+}) => (
+  <div className="flex flex-col gap-1 p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/[0.07] transition-colors duration-200">
+    <div className="flex items-center gap-2 text-muted-foreground/70">
+      {icon}
+      <span className="text-[10px] sm:text-xs uppercase tracking-wider">{label}</span>
+    </div>
+    <span className="text-sm sm:text-base font-semibold text-foreground/90 truncate">{value}</span>
+  </div>
+);
+
+export function ChatPage() {
+  const [isInfoExpanded, setIsInfoExpanded] = useState(false);
+  const [lastMetadata, setLastMetadata] = useState<ChatMetadata | null>(null);
+
+  const handleMetadataUpdate = (metadata: ChatMetadata) => {
+    setLastMetadata(metadata);
+  };
+
+  return (
+    <main aria-label="chat-page" className="relative flex flex-col h-full bg-gradient-to-b from-bg-0 via-bg-100/50 to-bg-100">
+      {/* Subtle background pattern with Main Color glow */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-500/10 via-transparent to-transparent pointer-events-none" />
+      
+      {/* Chat interface */}
+      <section 
+        aria-label="chat-interface" 
+        className={`relative flex-1 overflow-hidden transition-all duration-300 border-x border-white/5 shadow-[inset_0_0_20px_-10px_rgba(255,107,53,0.05)] ${
+          lastMetadata ? "pb-10" : ""
+        }`}
       >
-        <div className="flex items-center gap-4">
-          {lastMetadata && (
-            <div className="text-xs text-muted-foreground flex gap-4">
-              <span>Model: {lastMetadata.model_used}</span>
-              {lastMetadata.usage_metadata?.total_token_count && (
-                <span>Tokens: {lastMetadata.usage_metadata.total_token_count.toLocaleString()}</span>
-              )}
-              {lastMetadata.finish_reason && (
-                <span>Status: {lastMetadata.finish_reason}</span>
-              )}
-            </div>
-          )}
-        </div>
-      </aside>
+        <ChatBot onMetadataUpdate={handleMetadataUpdate} />
+      </section>
+
+      {/* Floating metadata panel */}
+      <MetadataPanel 
+        metadata={lastMetadata}
+        isExpanded={isInfoExpanded}
+        onToggle={() => setIsInfoExpanded(!isInfoExpanded)}
+      />
     </main>
   );
 }

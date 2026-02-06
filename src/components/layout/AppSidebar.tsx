@@ -24,6 +24,7 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
+  Sparkles,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useChatContext } from "@/contexts/ChatContext";
@@ -81,48 +82,69 @@ export function AppSidebar() {
 
   return (
     <section aria-label="app-sidebar">
-      <Sidebar>
-        {/* Header: Logo + Trigger */}
-        <SidebarHeader className="flex flex-row items-center justify-between p-6">
-          <span className="font-bold text-lg tracking-tight text-foreground">
-            Milkyway AI
-          </span>
-          <SidebarTrigger />
+      <Sidebar className="border-r border-white/5 bg-gradient-to-b from-bg-100 to-bg-0">
+        {/* Header: Logo with glow effect */}
+        <SidebarHeader className="px-5 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {/* Glowing logo icon */}
+              <div className="relative group">
+                {/* Subtle outer glow */}
+                <div className="absolute -inset-3 bg-gradient-to-r from-[#ff6b35] via-[#ffc107] to-[#ff6b35] rounded-full blur-xl opacity-10 group-hover:opacity-20 transition-all duration-500" />
+                {/* Core glow */}
+                <div className="absolute -inset-1 bg-gradient-to-r from-[#ff6b35] via-[#ff9f43] to-[#ffc107] rounded-xl blur-md opacity-40 group-hover:opacity-60 transition-all duration-300" />
+                
+                <div className="relative flex h-9 w-9 items-center justify-center">
+                  <img 
+                    src="/1217198-200.png" 
+                    alt="Milkyway AI Logo" 
+                    className="h-full w-full object-cover opacity-100 brightness-0 invert drop-shadow-[0_0_2px_rgba(255,255,255,0.3)]" 
+                  />
+                </div>
+              </div>
+              {/* Gradient text logo */}
+              <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-orange-200 to-amber-200 bg-clip-text text-transparent">
+                Milkyway AI
+              </span>
+            </div>
+            <SidebarTrigger className="hover:bg-white/5 rounded-lg transition-colors" />
+          </div>
         </SidebarHeader>
 
-        <SidebarContent className="p-2 gap-4">
-          {/* New Chat Button */}
+        <SidebarContent className="px-3 gap-6">
+          {/* New Chat Button - Gemini style */}
           <SidebarGroup>
             <SidebarMenu>
               <SidebarMenuItem>
-                <div className="group flex items-center hover:!bg-muted transition-colors rounded-xl px-2">
-                  <SidebarMenuButton
-                    size="lg"
-                    onClick={handleNewChat}
-                    className="flex-1 h-10 !bg-transparent cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3 font-medium">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                        <Plus className="h-4 w-4" />
-                      </div>
-                      <span>새 대화</span>
-                    </div>
-                  </SidebarMenuButton>
-                </div>
+                <SidebarMenuButton
+                  size="lg"
+                  onClick={handleNewChat}
+                  className="group/new w-full h-12  px-3 rounded-2xl !bg-transparent hover:!bg-muted cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 px-1">
+                      <Plus className="h-4 w-4 text-purple-200 group-hover/new:text-white transition-colors" />
+                    <span className="text-sm font-medium text-foreground/80 group-hover/new:text-foreground transition-colors">
+                      새 대화
+                    </span>
+                  </div>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
 
+          {/* Divider */}
+          <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
           {/* Recent Conversations Section */}
           <SidebarGroup className="flex-1 min-h-0">
-            <SidebarGroupLabel className="px-2 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <SidebarGroupLabel className="px-3 mb-3 text-sm font-medium text-muted-foreground uppercase tracking-widest">
               최근 대화
             </SidebarGroupLabel>
-            <SidebarGroupContent className="h-full">
+            <SidebarGroupContent className="h-full overflow-y-auto">
               <SidebarMenu className="gap-1">
                 {recentConversations.length > 0 ? (
                   recentConversations.map((conv) => (
-                    <SidebarMenuItem key={conv.id} className="group">
+                    <SidebarMenuItem key={conv.id} className="group/item">
                       {editingId === conv.id ? (
                         <div className="flex items-center gap-2 px-2 py-1">
                           <Input
@@ -133,46 +155,59 @@ export function AppSidebar() {
                               if (e.key === "Escape") handleRenameCancel();
                             }}
                             onBlur={handleRenameSubmit}
-                            className="h-7 text-sm"
+                            className="h-8 text-sm focus:border-purple-500/30"
                             autoFocus
                           />
                         </div>
                       ) : (
-                        <div className="group flex items-center hover:!bg-muted transition-colors rounded-4xl px-2">
+                        <div className="relative flex items-center">
                           <SidebarMenuButton
                             isActive={currentConversationId === conv.id}
                             onClick={() => handleConversationClick(conv.id)}
-                            className="flex-1 h-9 !bg-transparent min-w-0 overflow-hidden"
+                            className={`
+                              flex-1 h-10 px-3 rounded-xl transition-all duration-200 min-w-0 overflow-hidden
+                              ${currentConversationId === conv.id 
+                                ? "bg-white/10 text-foreground border border-white/10" 
+                                : "!bg-transparent hover:!bg-muted text-foreground/70 hover:text-foreground border border-transparent"
+                              }
+                            `}
                           >
                             <div className="flex items-center gap-3 min-w-0 w-full">
-                              <MessageSquare className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <MessageSquare className={`h-3.5 w-3.5 shrink-0 transition-colors ${
+                                currentConversationId === conv.id 
+                                  ? "text-orange-400" 
+                                  : "text-muted-foreground/50"
+                              }`} />
                               <span className="text-sm truncate flex-1 text-left">
                                 {conv.title}
                               </span>
                             </div>
                           </SidebarMenuButton>
                           
-                          {/* Action Menu */}
+                          {/* Action Menu - appears on hover */}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all shrink-0 !bg-transparent hover:!bg-gray-700"
+                                className="absolute right-1 h-7 w-7 opacity-0 group-hover/item:opacity-100 transition-all duration-200 shrink-0 rounded-lg hover:bg-white/10"
                               >
-                                <MoreHorizontal className="h-4 w-4" />
+                                <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
-                              <DropdownMenuItem onClick={() => handleRenameStart(conv)}>
-                                <Pencil className="h-4 w-4 mr-2" />
+                            <DropdownMenuContent align="end" className="w-40 bg-bg-200/95 backdrop-blur-xl border-white/10 rounded-xl">
+                              <DropdownMenuItem 
+                                onClick={() => handleRenameStart(conv)}
+                                className="text-sm rounded-lg focus:bg-white/5"
+                              >
+                                <Pencil className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
                                 이름 변경
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={() => handleDelete(conv.id)}
-                                className="text-destructive focus:text-destructive"
+                                className="text-sm rounded-lg text-red-400 focus:text-red-400 focus:bg-red-500/10"
                               >
-                                <Trash2 className="h-4 w-4 mr-2" />
+                                <Trash2 className="h-3.5 w-3.5 mr-2" />
                                 삭제
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -182,25 +217,41 @@ export function AppSidebar() {
                     </SidebarMenuItem>
                   ))
                 ) : (
-                  <div className="px-3 py-2 text-xs text-muted-foreground">
-                    대화 내역이 없습니다
+                  <div className="px-3 py-6 text-center">
+                    <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-white/5 mb-3">
+                      <MessageSquare className="h-4 w-4 text-muted-foreground/40" />
+                    </div>
+                    <p className="text-xs text-muted-foreground/50">
+                      대화 내역이 없습니다
+                    </p>
                   </div>
                 )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* Footer - Settings only */}
-          <div className="mt-auto pb-4 px-2">
-            <SidebarMenu className="gap-1">
+          {/* Footer - Settings with subtle divider */}
+          <div className="mt-auto pb-4">
+            <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mb-4" />
+            <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
                   isActive={location.pathname === "/settings"}
-                  className="h-10 px-3 bg-transparent hover:bg-sidebar-accent/50 transition-colors rounded-lg"
+                  className={`
+                    h-10 px-3 rounded-xl transition-all duration-200
+                    ${location.pathname === "/settings"
+                      ? "bg-white/10 text-foreground"
+                      : "bg-transparent hover:bg-white/5 text-foreground/70 hover:text-foreground"
+                    }
+                  `}
                 >
                   <Link to="/settings" className="flex items-center gap-3">
-                    <Settings className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+                    <Settings className={`h-4 w-4 transition-colors ${
+                      location.pathname === "/settings" 
+                        ? "text-orange-400" 
+                        : "text-muted-foreground/50"
+                    }`} />
                     <span className="text-sm font-medium">설정</span>
                   </Link>
                 </SidebarMenuButton>
@@ -212,3 +263,4 @@ export function AppSidebar() {
     </section>
   );
 }
+

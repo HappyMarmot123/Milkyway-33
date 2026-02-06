@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { RefreshCcwIcon, Settings2 } from "lucide-react";
+import { RefreshCcwIcon, Settings2, Sparkles, Send } from "lucide-react";
 import {
   Conversation,
   ConversationContent,
@@ -38,6 +38,7 @@ interface ChatBotProps {
 const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
   const [input, setInput] = useState("");
   const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const { 
     messages, 
     status, 
@@ -78,133 +79,209 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
     }
   };
 
+  const hasMessages = messages.length > 0;
+
   return (
     <div className="flex flex-col h-full w-full">
-      <Conversation className="flex-1 min-h-0 overflow-hidden">
-        <ConversationContent>
-          {messages.map((message, index) => (
-            <div key={message.id}>
-              {/* Show reasoning/thought if available */}
-              {message.role === "assistant" && message.metadata?.thought && (
-                <Reasoning className="w-full" isStreaming={false}>
-                  <ReasoningTrigger />
-                  <ReasoningContent>{message.metadata.thought}</ReasoningContent>
-                </Reasoning>
-              )}
-              
-              <Message from={message.role} className="">
-                <MessageContent>
-                  <MessageResponse>{message.content}</MessageResponse>
-                </MessageContent>
-                {message.role === "assistant" && (
-                  <ResponseActionContainer 
-                    content={message.content}
-                    onRegenerate={() => {
-                      if (index === messages.length - 1) {
-                         regenerateLastResponse();
-                      }
-                    }}
-                  />
+      {/* Centered container with max-width - Gemini style */}
+      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4 sm:px-6">
+        {/* Conversation area */}
+        <Conversation className="flex-1 min-h-0 overflow-hidden">
+          <ConversationContent className="h-full align-middle">
+            {/* Empty state - centered welcome */}
+            {!hasMessages && status === 'idle' && (
+              <div className="flex flex-col items-center justify-center h-full text-center space-y-8 animate-in fade-in zoom-in-95 duration-500">
+                {/* Decorative Background Glow */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gradient-to-tr from-orange-500/10 via-amber-500/5 to-transparent rounded-full blur-[100px] pointer-events-none" />
+                
+                <div className="relative group cursor-default">
+                  <h1 className="text-5xl sm:text-7xl font-bold tracking-tighter pb-2">
+                    <span className="bg-gradient-to-br from-[#ff6b35] via-[#ff9f43] to-[#ffc107] bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(255,107,53,0.3)]">
+                      Milky Way
+                    </span>
+                  </h1>
+                  {/* Floating particles/stars effect behind text could be added here */}
+                  <div className="absolute -inset-x-8 -inset-y-4 bg-gradient-to-r from-[#ff6b35]/20 via-[#ffc107]/10 to-[#ff6b35]/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                </div>
+
+                <div className="space-y-3 max-w-md relative z-10 px-4">
+                  <h2 className="text-lg sm:text-xl font-medium text-foreground/80 tracking-wide">
+                    무엇을 도와드릴까요?
+                  </h2>
+                  <p className="text-sm text-muted-foreground/60 leading-relaxed font-light">
+                    당신의 아이디어를 우주처럼 넓게 펼쳐보세요.<br className="hidden sm:block"/>
+                    복잡한 문제 해결부터 창의적인 영감까지 함께합니다.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {messages.map((message, index) => (
+              <div key={message.id}>
+                {/* Show reasoning/thought if available */}
+                {message.role === "assistant" && message.metadata?.thought && (
+                  <Reasoning className="w-full" isStreaming={false}>
+                    <ReasoningTrigger />
+                    <ReasoningContent>{message.metadata.thought}</ReasoningContent>
+                  </Reasoning>
                 )}
+                
+                <Message from={message.role} className="">
+                  <MessageContent>
+                    <MessageResponse>{message.content}</MessageResponse>
+                  </MessageContent>
+                  {message.role === "assistant" && (
+                    <ResponseActionContainer 
+                      content={message.content}
+                      onRegenerate={() => {
+                        if (index === messages.length - 1) {
+                           regenerateLastResponse();
+                        }
+                      }}
+                    />
+                  )}
+                </Message>
+              </div>
+            ))}
+
+            {/* Show status-specific loader */}
+            {status === 'thinking' && (
+              <Loader variant="thinking" className="" />
+            )}
+            
+            {status === 'generating' && (
+              <Loader variant="generating" className="" />
+            )}
+            
+            {status === 'streaming' && currentResponse && (
+              <Message from="assistant" className="">
+                <MessageContent>
+                  <MessageResponse>{currentResponse}</MessageResponse>
+                </MessageContent>
               </Message>
-            </div>
-          ))}
+            )}
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
 
-          {/* Show status-specific loader */}
-          {status === 'thinking' && (
-            <Loader variant="thinking" className="" />
-          )}
-          
-          {status === 'generating' && (
-            <Loader variant="generating" className="" />
-          )}
-          
-          {status === 'streaming' && currentResponse && (
-            <Message from="assistant" className="">
-              <MessageContent>
-                <MessageResponse>{currentResponse}</MessageResponse>
-              </MessageContent>
-            </Message>
-          )}
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
-
-      <div className="flex-shrink-0 border-t">
-        <PromptInput
-          onSubmit={handleSubmit}
-          className="mt-4"
-        >
-          <PromptInputBody>
-            <PromptInputTextarea
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInput(e.target.value)}
-              value={input}
-              placeholder="메시지를 입력하세요..."
-              onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit({ text: input });
-                }
-              }}
-              className=""
-            />
-          </PromptInputBody>
-          <PromptInputFooter className="">
-            <PromptInputTools>
-              <PromptInputButton
-                variant="ghost"
-                onClick={clearMessages}
-                disabled={messages.length === 0}
-                label="Clear"
-                tooltip="Clear conversation"
-              >
-                <RefreshCcwIcon size={16} />
-                <span>Clear</span>
-              </PromptInputButton>
-
-              <div className="w-px h-4 bg-border mx-1" />
-
-              <PromptInputButton
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsConfigOpen(true)}
-                label="Prompt Settings"
-                tooltip="Configure System Instruction & Few-shot"
-                className={promptConfig.systemInstruction || (promptConfig.examples?.length || 0) > 0 ? "text-primary/80" : ""}
-              >
-                <Settings2 size={16} />
-                <span>Settings</span>
-              </PromptInputButton>
-
-              <span className="text-xs text-muted-foreground ml-2">
-                Gemini 2.5 Flash-Lite
-              </span>
-            </PromptInputTools>
+        {/* Gemini-style input area - floating with padding */}
+        <div className="shrink-0 py-6 sm:py-8">
+          <div className="relative">
+            {/* Subtle glow effect when focused - around entire container */}
+            {isFocused && (
+              <div className="absolute -inset-[2px] rounded-[30px] bg-gradient-to-r from-[#ff6b35]/10 via-[#ff8c5a]/5 to-[#ffc107]/10 blur-xl transition-all duration-700" />
+            )}
             
-            {/* DEV: Error Simulation Buttons (Restore for testing) */}
-            <div className="flex gap-2 mr-4 opacity-80 hover:opacity-100 transition-opacity">
-               <button 
-                 onClick={() => setError("429 RESOURCE_EXHAUSTED: Quota exceeded test")}
-                 className="text-[10px] bg-red-500/30 text-red-400 border border-red-500/50 px-2 py-1 rounded hover:bg-red-500/50 transition-colors"
-                 title="Simulate 429 Error"
-               >
-                 Err 429
-               </button>
-               <button 
-                 onClick={() => setError("500 INTERNAL_SERVER_ERROR test")}
-                 className="text-[10px] bg-orange-500/30 text-orange-400 border border-orange-500/50 px-2 py-1 rounded hover:bg-orange-500/50 transition-colors"
-                 title="Simulate 500 Error"
-               >
-                 Err 500
-               </button>
-            </div>
+            <div className={`
+              relative rounded-[28px] transition-all duration-300 ease-out border
+              ${isFocused 
+                ? "bg-bg-200/95 border-[#ff6b35]/40 shadow-[0_0_15px_-5px_rgba(255,107,53,0.15)]" 
+                : "bg-bg-200/70 border-[#ff6b35]/30 shadow-[0_0_10px_-5px_rgba(255,107,53,0.05)] hover:border-[#ff6b35]/40 hover:bg-bg-200/80 hover:shadow-[0_0_15px_-5px_rgba(255,107,53,0.1)]"
+              }
+            `}>
             
-            <PromptInputSubmit 
-              disabled={!input.trim() && status === 'idle'} 
-              status={getSubmitStatus()} 
-            />
-          </PromptInputFooter>
-        </PromptInput>
+            <PromptInput
+              onSubmit={handleSubmit}
+              className="bg-transparent rounded-[28px]"
+            >
+              <PromptInputBody>
+                <PromptInputTextarea
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInput(e.target.value)}
+                  value={input}
+                  placeholder="메시지를 입력하세요..."
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                  onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit({ text: input });
+                    }
+                  }}
+                />
+              </PromptInputBody>
+              
+              <PromptInputFooter className="px-4 pb-4 pt-2">
+                <PromptInputTools className="gap-1">
+                  <PromptInputButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearMessages}
+                    disabled={messages.length === 0}
+                    label="Clear"
+                    tooltip="대화 초기화"
+                    className="text-muted-foreground/70 hover:text-foreground hover:bg-white/5 rounded-lg px-3 h-8 transition-all duration-200"
+                  >
+                    <RefreshCcwIcon size={14} />
+                    <span className="text-xs">초기화</span>
+                  </PromptInputButton>
+
+                  <div className="w-px h-4 bg-white/10 mx-1" />
+
+                  <PromptInputButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsConfigOpen(true)}
+                    label="Prompt Settings"
+                    tooltip="시스템 설정"
+                    className={`text-muted-foreground/70 hover:text-foreground hover:bg-white/5 rounded-lg px-3 h-8 transition-all duration-200 ${
+                      promptConfig.systemInstruction || (promptConfig.examples?.length || 0) > 0 
+                        ? "text-purple-400/80" 
+                        : ""
+                    }`}
+                  >
+                    <Settings2 size={14} />
+                    <span className="text-xs">설정</span>
+                  </PromptInputButton>
+
+                  {/* Model indicator */}
+                  <div className="hidden sm:flex items-center gap-1.5 ml-2 px-2.5 py-1 rounded-lg bg-white/5 text-muted-foreground/60">
+                    <Sparkles size={12} className="text-purple-400/70" />
+                    <span className="text-[11px] font-medium">Gemini 2.5</span>
+                  </div>
+                </PromptInputTools>
+                
+                {/* Submit button - Gemini style */}
+                <div className="flex items-center gap-2">
+                  {/* DEV: Error Simulation (hidden in production) */}
+                  <div className="hidden sm:flex gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={() => setError("429 RESOURCE_EXHAUSTED: Quota exceeded test")}
+                      className="text-[9px] bg-red-500/20 text-red-400/80 border border-red-500/30 px-1.5 py-0.5 rounded hover:bg-red-500/30 transition-colors"
+                      title="Simulate 429 Error"
+                    >
+                      429
+                    </button>
+                    <button 
+                      onClick={() => setError("500 INTERNAL_SERVER_ERROR test")}
+                      className="text-[9px] bg-orange-500/20 text-orange-400/80 border border-orange-500/30 px-1.5 py-0.5 rounded hover:bg-orange-500/30 transition-colors"
+                      title="Simulate 500 Error"
+                    >
+                      500
+                    </button>
+                  </div>
+                  
+                  <PromptInputSubmit 
+                    disabled={!input.trim() && status === 'idle'} 
+                    status={getSubmitStatus()}
+                    className={`
+                      rounded-xl h-9 w-9 transition-all duration-300
+                      ${input.trim() 
+                        ? "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white shadow-lg shadow-purple-500/25" 
+                        : "bg-white/10 text-muted-foreground/50"
+                      }
+                    `}
+                  />
+                </div>
+              </PromptInputFooter>
+            </PromptInput>
+            </div>
+          </div>
+          
+          {/* Disclaimer text - Gemini style */}
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground/40 text-center mt-3">
+            Gemini는 실수를 할 수 있습니다. 중요한 정보는 확인하세요.
+          </p>
+        </div>
       </div>
 
       <ErrorModal 
