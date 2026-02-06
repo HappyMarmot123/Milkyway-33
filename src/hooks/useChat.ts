@@ -6,59 +6,100 @@ import type {
   ChatState,
   ChatPromptConfig
 } from '@/features/chat/types';
+import { chatRepository } from '@/services/chatRepository';
+import { useChatStorage } from '@/hooks/useChatStorage';
 
 function generateId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
 export function useChat() {
-  const [state, setState] = useState<ChatState>({
-    status: 'idle',
-    messages: [],
-    currentResponse: '',
-    currentMetadata: null,
-    error: null,
-    promptConfig: {
-      systemInstruction: '',
-      examples: []
-    }
-  });
+  // Current conversation ID
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  
+  // Persistent Storage
+  const { messages: storedMessages, settings: storedSettings, conversations } = useChatStorage(currentConversationId ?? undefined);
+  
+  // Local State (Transient)
+  const [status, setStatus] = useState<ChatState['status']>('idle');
+  const [currentResponse, setCurrentResponse] = useState('');
+  const [currentMetadata, setCurrentMetadata] = useState<ChatMetadata | null>(null);
+  const [error, setErrorState] = useState<string | null>(null);
 
-  const setStatus = useCallback((status: ChatState['status']) => {
-    setState(prev => ({ ...prev, status }));
-  }, []);
+  const promptConfig: ChatPromptConfig = storedSettings || { systemInstruction: '', examples: [] };
 
   const setPromptConfig = useCallback((config: Partial<ChatPromptConfig>) => {
-    setState(prev => ({
-      ...prev,
-      promptConfig: { ...prev.promptConfig, ...config }
-    }));
+    const newConfig = { ...promptConfig, ...config };
+    chatRepository.saveSettings(newConfig);
+  }, [promptConfig]);
+
+  // Create a new conversation (max 10 sessions)
+  const createNewConversation = useCallback(async () => {
+    // Check conversation limit
+    if (conversations.length >= 10) {
+      setErrorState('대화 세션은 최대 10개까지 생성 가능합니다. 기존 대화를 삭제해주세요.');
+      return null;
+    }
+    
+    const conversation = await chatRepository.createConversation();
+    setCurrentConversationId(conversation.id);
+    setCurrentResponse('');
+    setCurrentMetadata(null);
+    setErrorState(null);
+    return conversation;
+  }, [conversations.length]);
+
+  // Switch to an existing conversation
+  const switchConversation = useCallback((conversationId: string) => {
+    setCurrentConversationId(conversationId);
+    setCurrentResponse('');
+    setCurrentMetadata(null);
+    setErrorState(null);
+  }, []);
+
+  // Update conversation title based on first user message
+  const updateConversationTitle = useCallback(async (conversationId: string, content: string) => {
+    const title = content.length > 30 ? content.slice(0, 30) + '...' : content;
+    await chatRepository.updateConversation(conversationId, { title });
   }, []);
 
   const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim() || state.status !== 'idle') return;
+    if (!content.trim() || status !== 'idle') return;
 
-    // Add user message
+    let conversationId = currentConversationId;
+    
+    // If no conversation exists, create one
+    if (!conversationId) {
+      const conversation = await createNewConversation();
+      if (!conversation) return; // Session limit reached
+      conversationId = conversation.id;
+    }
+
+    // Add user message to DB
     const userMessage: ChatMessage = {
       id: generateId(),
+      conversationId,
       role: 'user',
       content: content.trim(),
       timestamp: new Date(),
     };
+    await chatRepository.saveMessage(userMessage);
 
-    setState(prev => ({
-      ...prev,
-      messages: [...prev.messages, userMessage],
-      currentResponse: '',
-      currentMetadata: null,
-      error: null,
-    }));
+    // Update title if this is the first message
+    if (storedMessages.length === 0) {
+      await updateConversationTitle(conversationId, content.trim());
+    }
+
+    // Reset transient state
+    setCurrentResponse('');
+    setCurrentMetadata(null);
+    setErrorState(null);
 
     try {
       let fullResponse = '';
       let metadata: ChatMetadata = {};
 
-      for await (const event of streamChat(content, state.promptConfig)) {
+      for await (const event of streamChat(content, promptConfig)) {
         switch (event.status) {
           case 'thinking':
             setStatus('thinking');
@@ -75,11 +116,7 @@ export function useChat() {
             setStatus('streaming');
             if (event.chunk) {
               fullResponse += event.chunk;
-              setState(prev => ({
-                ...prev,
-                status: 'streaming',
-                currentResponse: fullResponse,
-              }));
+              setCurrentResponse(fullResponse);
             }
             break;
 
@@ -92,30 +129,34 @@ export function useChat() {
               usage_metadata: event.usage_metadata,
             };
 
-            // Add assistant message
-            const assistantMessage: ChatMessage = {
-              id: generateId(),
-              role: 'assistant',
-              content: fullResponse || event.response || '',
-              timestamp: new Date(),
-              metadata,
-            };
+            // Add assistant message to DB
+            {
+              const assistantMessage: ChatMessage = {
+                id: generateId(),
+                conversationId,
+                role: 'assistant',
+                content: fullResponse || event.response || '',
+                timestamp: new Date(),
+                metadata,
+              };
+              await chatRepository.saveMessage(assistantMessage);
+            }
 
-            setState(prev => ({
-              ...prev,
-              status: 'idle',
-              messages: [...prev.messages, assistantMessage],
-              currentResponse: '',
-              currentMetadata: metadata,
-            }));
+            // Save token usage
+            if (event.usage_metadata) {
+              const inputTokens = event.usage_metadata.prompt_token_count || 0;
+              const outputTokens = event.usage_metadata.candidates_token_count || 0;
+              await chatRepository.addTokenUsage(inputTokens, outputTokens);
+            }
+
+            setStatus('idle');
+            setCurrentResponse('');
+            setCurrentMetadata(metadata);
             break;
 
           case 'error':
-            setState(prev => ({
-              ...prev,
-              status: 'idle',
-              error: event.message || 'An error occurred',
-            }));
+            setStatus('idle');
+            setErrorState(event.message || 'An error occurred');
             break;
         }
       }
@@ -124,7 +165,6 @@ export function useChat() {
       if (error instanceof Error) {
         errorMessage = error.message;
         
-        // Map common backend errors
         if (errorMessage.includes('403')) {
           errorMessage = '보안 정책에 의해 차단된 메시지입니다.';
         } else if (errorMessage.includes('400')) {
@@ -132,81 +172,83 @@ export function useChat() {
         }
       }
       
-      setState(prev => ({
-        ...prev,
-        status: 'idle',
-        error: errorMessage,
-      }));
+      setStatus('idle');
+      setErrorState(errorMessage);
     }
-  }, [state.status, state.promptConfig, setStatus]);
+  }, [status, currentConversationId, promptConfig, storedMessages.length, createNewConversation, updateConversationTitle]);
 
-  const clearMessages = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      status: 'idle',
-      messages: [],
-      currentResponse: '',
-      currentMetadata: null,
-      error: null,
-    }));
+  const clearMessages = useCallback(async () => {
+    if (currentConversationId) {
+      await chatRepository.clearConversationMessages(currentConversationId);
+    }
+    setCurrentResponse('');
+    setCurrentMetadata(null);
+    setErrorState(null);
+  }, [currentConversationId]);
+
+  const deleteConversation = useCallback(async (conversationId: string) => {
+    await chatRepository.deleteConversation(conversationId);
+    if (currentConversationId === conversationId) {
+      setCurrentConversationId(null);
+    }
+  }, [currentConversationId]);
+
+  const renameConversation = useCallback(async (conversationId: string, newTitle: string) => {
+    await chatRepository.updateConversation(conversationId, { title: newTitle });
   }, []);
 
   const clearError = useCallback(() => {
-    setState(prev => ({ ...prev, error: null }));
+    setErrorState(null);
   }, []);
 
-  const setError = useCallback((error: string) => {
-    setState(prev => ({ ...prev, error }));
+  const setError = useCallback((err: string) => {
+    setErrorState(err);
   }, []);
 
-  const regenerateLastResponse = useCallback(() => {
-    if (state.status !== 'idle' || state.messages.length === 0) return;
+  const regenerateLastResponse = useCallback(async () => {
+    if (status !== 'idle' || storedMessages.length === 0 || !currentConversationId) return;
 
-    // Find the last user message manually
     let lastUserMessageIndex = -1;
-    for (let i = state.messages.length - 1; i >= 0; i--) {
-      if (state.messages[i].role === 'user') {
+    for (let i = storedMessages.length - 1; i >= 0; i--) {
+      if (storedMessages[i].role === 'user') {
         lastUserMessageIndex = i;
         break;
       }
     }
     if (lastUserMessageIndex === -1) return;
 
-    const lastUserMessage = state.messages[lastUserMessageIndex];
+    const lastUserMessage = storedMessages[lastUserMessageIndex];
     if (!lastUserMessage) return;
 
-    // Let's optimize: We want to keep the conversation history EXCEPT the last exchange.
-    const messagesToKeep = state.messages.slice(0, lastUserMessageIndex);
-
-    setState(prev => ({
-      ...prev,
-      messages: messagesToKeep,
-      currentResponse: '',
-      currentMetadata: null,
-      error: null,
-    }));
-
-    // Trigger sending the message again
+    const messagesToDelete = storedMessages.slice(lastUserMessageIndex).map(m => m.id);
+    await chatRepository.deleteMessages(messagesToDelete);
+    
     sendMessage(lastUserMessage.content);
 
-  }, [state.messages, state.status, sendMessage]);
+  }, [status, storedMessages, currentConversationId, sendMessage]);
 
   return {
     // State
-    status: state.status,
-    messages: state.messages,
-    currentResponse: state.currentResponse,
-    currentMetadata: state.currentMetadata,
-    error: state.error,
-    isLoading: state.status !== 'idle',
-    promptConfig: state.promptConfig,
+    status,
+    messages: storedMessages,
+    conversations,
+    currentConversationId,
+    currentResponse,
+    currentMetadata,
+    error,
+    isLoading: status !== 'idle',
+    promptConfig,
     
     // Actions
     sendMessage,
-    regenerateLastResponse, // Exposed for external use
+    regenerateLastResponse,
     clearMessages,
     clearError,
     setError,
     setPromptConfig,
+    createNewConversation,
+    switchConversation,
+    deleteConversation,
+    renameConversation,
   };
-};
+}

@@ -1,20 +1,22 @@
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { AppSidebar } from "./AppSidebar";
 import { Header } from "./Header";
+import { ChatProvider } from "@/contexts/ChatContext";
 
-export function AppLayout({ children }) {
+export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <Header />
-        <Separator />
-        <div aria-label="app-content" className="flex-1 overflow-auto">
-          {children}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    <ChatProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <Header />
+          <Separator />
+          <div aria-label="app-content" className="flex-1 overflow-auto bg-muted/30">
+            {children}
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </ChatProvider>
   );
 }
-

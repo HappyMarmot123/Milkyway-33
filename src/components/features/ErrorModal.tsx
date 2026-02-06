@@ -131,6 +131,6 @@ function parseError(errorMessage: string): { code: string; message: string } {
 
   return {
     code: "Error",
-    message: "An unexpected error occurred."
+    message: errorMessage || "An unexpected error occurred."
   };
 }

@@ -26,7 +26,7 @@ export function ChatPage() {
   };
 
   return (
-    <main aria-label="chat-page" className="flex flex-col h-full">
+    <main aria-label="chat-page" className="flex flex-col h-full bg-lightgray">
       <section aria-label="chat-interface" className="flex-1 overflow-hidden">
         <ChatBot onMetadataUpdate={handleMetadataUpdate} />
       </section>

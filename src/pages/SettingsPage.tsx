@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ModelSettings } from "@/components/features/ModelSettings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { TokenUsage } from "@/components/features/TokenUsage";
+import { chatRepository } from "@/services/chatRepository";
+import { Button } from "@/components/ui/button";
+import { RefreshCcw } from "lucide-react";
 
 export function SettingsPage() {
-  const [model, setModel] = useState("gpt-4");
+  const [model, setModel] = useState("gemini-2.5-flash-lite");
   const [settings, setSettings] = useState({
     temperature: 0.7,
     maxTokens: 2000,
@@ -16,10 +19,21 @@ export function SettingsPage() {
     stream: true,
   });
 
-  // Mock data for Total Token Usage (since we don't have backend persistence yet)
-  const totalUsage = {
-    inputTokens: 15420,
-    outputTokens: 8930,
+  // Token usage from IndexDB
+  const [tokenUsage, setTokenUsage] = useState({ inputTokens: 0, outputTokens: 0 });
+
+  useEffect(() => {
+    loadTokenUsage();
+  }, []);
+
+  const loadTokenUsage = async () => {
+    const usage = await chatRepository.getTotalTokenUsage();
+    setTokenUsage(usage);
+  };
+
+  const handleResetTokenUsage = async () => {
+    await chatRepository.resetTokenUsage();
+    setTokenUsage({ inputTokens: 0, outputTokens: 0 });
   };
 
   return (
@@ -37,15 +51,28 @@ export function SettingsPage() {
         <section aria-label="token-usage-section">
            <Card>
             <CardHeader className="pb-3 sm:pb-6">
-              <CardTitle className="text-base sm:text-lg">총 토큰 사용량</CardTitle>
-              <CardDescription className="text-sm">
-                전체 대화에서 사용된 토큰 통계입니다.
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base sm:text-lg">총 토큰 사용량</CardTitle>
+                  <CardDescription className="text-sm">
+                    전체 대화에서 사용된 토큰 통계입니다.
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetTokenUsage}
+                  className="gap-2"
+                >
+                  <RefreshCcw className="h-4 w-4" />
+                  초기화
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
                <TokenUsage
-                  usage={totalUsage}
-                  maxTokens={1000000} // Higher limit for total
+                  usage={tokenUsage}
+                  maxTokens={1000000}
                   modelId={model}
                 />
             </CardContent>
@@ -66,10 +93,9 @@ export function SettingsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="gpt-4">GPT-4</SelectItem>
-                  <SelectItem value="gpt-3.5">GPT-3.5 Turbo</SelectItem>
-                  <SelectItem value="claude-3">Claude 3</SelectItem>
-                  <SelectItem value="gemini">Gemini Pro</SelectItem>
+                  <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</SelectItem>
+                  <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
+                  <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro</SelectItem>
                 </SelectContent>
               </Select>
             </CardContent>
@@ -83,24 +109,7 @@ export function SettingsPage() {
             onChange={setSettings}
           />
         </section>
-
-        <section aria-label="app-settings-section">
-          <Card>
-            <CardHeader className="pb-3 sm:pb-6">
-              <CardTitle className="text-base sm:text-lg">애플리케이션 설정</CardTitle>
-              <CardDescription className="text-sm">
-                추가 설정을 구성하세요.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                추가 설정 옵션이 여기에 표시됩니다.
-              </p>
-            </CardContent>
-          </Card>
-        </section>
       </div>
     </main>
   );
 }
-

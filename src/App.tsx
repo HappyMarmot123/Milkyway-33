@@ -4,7 +4,6 @@ import {
   LandingPage, 
   ChatPage, 
   SettingsPage, 
-  HistoryPage, 
   NotFoundPage 
 } from "@/pages";
 import { Toaster } from "@/components/ui/toaster";
@@ -24,14 +23,6 @@ function App() {
             element={
               <AppLayout>
                 <ChatPage />
-              </AppLayout>
-            }
-          />
-          <Route
-            path="/history"
-            element={
-              <AppLayout>
-                <HistoryPage />
               </AppLayout>
             }
           />
