@@ -140,9 +140,10 @@ export function ChatPage() {
   };
 
   return (
-    <main aria-label="chat-page" className="relative flex flex-col h-full bg-gradient-to-b from-bg-0 via-bg-100/50 to-bg-100">
-      {/* Subtle background pattern with Main Color glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-500/10 via-transparent to-transparent pointer-events-none" />
+    <main aria-label="chat-page" className="relative flex flex-col h-full">
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-bg-0 via-bg-100/50 to-bg-100" />
+      </div>
       
       {/* Chat interface */}
       <section 

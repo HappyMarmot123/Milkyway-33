@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { RefreshCcwIcon, Settings2, Sparkles, Send } from "lucide-react";
+import { useSidebar } from "@/components/ui/sidebar";
 import {
   Conversation,
   ConversationContent,
@@ -39,6 +40,7 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
   const [input, setInput] = useState("");
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const { state: sidebarState } = useSidebar();
   const { 
     messages, 
     status, 
@@ -83,11 +85,9 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
 
   return (
     <div className="flex flex-col h-full w-full">
-      {/* Centered container with max-width - Gemini style */}
-      <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4 sm:px-6">
-        {/* Conversation area */}
+      <div className="relative flex-1 flex flex-col max-w-4xl mx-auto w-full px-4 sm:px-6">
         <Conversation className="flex-1 min-h-0 overflow-hidden">
-          <ConversationContent className="h-full align-middle">
+          <ConversationContent className="h-full align-middle pb-56">
             {/* Empty state - centered welcome */}
             {!hasMessages && status === 'idle' && (
               <div className="flex flex-col items-center justify-center h-full text-center space-y-8 animate-in fade-in zoom-in-95 duration-500">
@@ -164,8 +164,15 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
           <ConversationScrollButton />
         </Conversation>
 
-        {/* Gemini-style input area - floating with padding */}
-        <div className="shrink-0 py-6 sm:py-8">
+        {/* Gemini-style input area - fixed at viewport bottom */}
+        <div 
+          className="fixed bottom-0 right-0 z-40 transition-all duration-200 ease-linear"
+          style={{ left: sidebarState === 'expanded' ? '19rem' : '0' }}
+        >
+          {/* Gradient fade overlay - creates smooth content fading effect */}
+          <div className="absolute bottom-full left-0 right-0 h-8 bg-gradient-to-t from-bg-100 via-bg-100/60 to-transparent pointer-events-none" />
+          
+          <div className="max-w-4xl mx-auto p-4 bg-bg-100">
           <div className="relative">
             {/* Subtle glow effect when focused - around entire container */}
             {isFocused && (
@@ -278,11 +285,12 @@ const ChatBot = ({ onMetadataUpdate }: ChatBotProps) => {
           </div>
           
           {/* Disclaimer text - Gemini style */}
-          <p className="text-[10px] sm:text-[11px] text-muted-foreground/40 text-center mt-3">
-            Gemini는 실수를 할 수 있습니다. 중요한 정보는 확인하세요.
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground text-center mt-3">
+            Milkyway-33 / Made by @HappyMarmot123
           </p>
         </div>
       </div>
+    </div>
 
       <ErrorModal 
         error={error} 

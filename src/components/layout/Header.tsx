@@ -62,7 +62,7 @@ export function Header() {
   const pageConfig = PAGE_CONFIG[location.pathname] || { title: "LLM Chat", icon: <Sparkles className="h-5 w-5" /> };
 
   return (
-    <header className="relative flex h-14 shrink-0 items-center justify-between gap-4 px-4 sm:px-6 bg-gradient-to-r from-bg-100/80 via-bg-100/60 to-bg-100/80 backdrop-blur-xl border-b border-white/5">
+    <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between gap-4 px-4 sm:px-6 bg-gradient-to-r from-bg-100/80 via-bg-100/60 to-bg-100/80 backdrop-blur-xl border-b border-white/5">
       {/* Subtle animated gradient line at bottom */}
       <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
       
